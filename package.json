@@ -17,9 +17,11 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.2",
     "nodemailer": "^9.0.1",
     "socket.io": "^4.8.3",
+    "start": "^5.1.0",
     "validator": "^13.15.35",
     "winston": "^3.19.0"
   }
