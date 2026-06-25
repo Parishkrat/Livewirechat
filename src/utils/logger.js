@@ -1,0 +1,22 @@
+import winston from "winston";
+
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ level, message, timestamp }) => {
+      return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+    }),
+  ),
+
+  transports: [
+    // Save logs in files
+    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
+    new winston.transports.File({ filename: "logs/combined.log" }),
+
+    //  Also show in console
+    new winston.transports.Console(),
+  ],
+});
+
+export default logger;

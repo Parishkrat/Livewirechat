@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chat App</title>
+    <style>
+      body {
+        font-family: Arial;
+        background: #f5f7fb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .chat-container {
+        width: 400px;
+        height: 600px;
+        background: white;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+
+      .header {
+        padding: 15px;
+        background: #2563eb;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logout-btn {
+        background: transparent;
+        border: 1px solid white;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .messages {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+      }
+
+      .message {
+        padding: 8px 12px;
+        margin: 5px 0;
+        border-radius: 10px;
+        max-width: 70%;
+      }
+
+      .sent {
+        background: #2563eb;
+        color: white;
+        margin-left: auto;
+      }
+
+      .received {
+        background: #e5e7eb;
+        color: black;
+        margin-right: auto;
+      }
+
+      .input-box {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+      }
+
+      input {
+        flex: 1;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+      }
+
+      button {
+        margin-left: 10px;
+        padding: 10px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      #notificationBox {
+        display: none;
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        width: 260px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 100;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="chat-container">
+      <!-- 🔔 HEADER -->
+      <div class="header">
+        <span>Chat</span>
+
+        <div style="display: flex; align-items: center; gap: 10px">
+          <div
+            style="position: relative; cursor: pointer"
+            onclick="toggleNotifications()"
+          >
+            <div
+              id="notificationBar"
+              style="
+                display: none;
+                background: #22c55e;
+                color: white;
+                padding: 8px;
+                text-align: center;
+              "
+            ></div>
+            🔔
+            <span
+              id="badge"
+              style="
+                position: absolute;
+                top: -5px;
+                right: -8px;
+                background: red;
+                color: white;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 50%;
+                display: none;
+              "
+              >0</span
+            >
+          </div>
+
+          <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <!-- 🔔 DROPDOWN -->
+      <div id="notificationBox">
+        <div style="padding: 10px; font-weight: bold">Notifications</div>
+        <div id="notificationList"></div>
+      </div>
+
+      <!-- USER SELECT -->
+      <div style="padding: 10px; border-bottom: 1px solid #ddd">
+        <select
+          id="userSelect"
+          onchange="onUserSelect()"
+          style="
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+          "
+        ></select>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="messages" id="messages"></div>
+
+      <!-- INPUT -->
+      <div class="input-box">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Type message..."
+          onkeydown="if (event.key === 'Enter') sendMessage();"
+        />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+<script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+      const API = "http://localhost:3000/api";
+      const socket = io("http://localhost:3000", { withCredentials: true });
+      const myId = localStorage.getItem("myUserId");
+
+      let receiverId = null;
+
+      // join user
+      socket.emit("join", myId);
+
+      // Auth check
+      async function checkAuth() {
+        try {
+          const res = await fetch(`${API}/users`, { credentials: "include" });
+          if (res.status === 401) window.location.href = "/Auth.html";
+        } catch {
+          window.location.href = "/Auth.html";
+        }
+      }
+
+      // Load users
+      async function loadUsers() {
+        const res = await fetch(`${API}/users`, { credentials: "include" });
+        const { users } = await res.json();
+
+        const select = document.getElementById("userSelect");
+        select.innerHTML =
+          `<option value="">Select user...</option>` +
+          users
+            .filter((u) => String(u._id) !== String(myId))
+            .map((u) => `<option value="${u._id}">${u.email}</option>`)
+            .join("");
+      }
+
+      function onUserSelect() {
+        receiverId = document.getElementById("userSelect").value;
+        if (receiverId) loadMessages();
+      }
+
+      // Load messages
+      async function loadMessages() {
+        if (!receiverId) return;
+
+        const res = await fetch(`${API}/messages/${receiverId}`, {
+          credentials: "include",
+        });
+        const { data: messages } = await res.json();
+
+        const container = document.getElementById("messages");
+        container.innerHTML = messages
+          .map(
+            (msg) =>
+              `<div class="message ${String(msg.sender._id) === String(myId) ? "sent" : "received"}">
+                  ${msg.message}
+              </div>`,
+          )
+          .join("");
+
+        container.scrollTop = container.scrollHeight;
+      }
+
+      // Send message
+      async function sendMessage() {
+        if (!receiverId) return alert("Select user");
+
+        const input = document.getElementById("messageInput");
+        const message = input.value.trim();
+        if (!message) return;
+
+        await fetch(`${API}/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ receiver: receiverId, message }),
+        });
+
+        input.value = "";
+        loadMessages();
+      }
+
+      // Socket listener
+      socket.on("newMessage", (msg) => {
+        console.log("REALTIME:", msg);
+
+        // 🔔 show sender email + message
+        showNotification(`${msg.sender.email}: ${msg.message}`);
+
+        // update chat if same user
+        if (String(msg.sender._id) === String(receiverId)) {
+          loadMessages();
+        }
+
+        // refresh bell dropdown
+        fetchNotifications();
+      });
+
+      // Notifications
+      async function fetchNotifications() {
+        const res = await fetch(`${API}/unread`, { credentials: "include" });
+        const { data } = await res.json();
+
+        const badge = document.getElementById("badge");
+        const list = document.getElementById("notificationList");
+
+        if (data.length > 0) {
+          badge.style.display = "inline-block";
+          badge.innerText = data.length;
+          list.innerHTML = data
+            .map(
+              (item) => `
+                  <div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer"
+                       onclick="receiverId='${item.userId}';loadMessages();toggleNotifications()">
+                      <div style="font-weight:bold">${item.email}</div>
+                      <div style="font-size:12px;color:gray">${item.latestMessage}</div>
+                  </div>
+              `,
+            )
+            .join("");
+        } else {
+          badge.style.display = "none";
+          list.innerHTML = `<div style="padding:10px">No new messages</div>`;
+        }
+      }
+
+      function toggleNotifications() {
+        const box = document.getElementById("notificationBox");
+        box.style.display = box.style.display === "none" ? "block" : "none";
+      }
+
+      function showNotification(text) {
+        const bar = document.getElementById("notificationBar");
+
+        bar.innerText = text;
+        bar.style.display = "block";
+
+        new Audio(
+          "https://www.soundjay.com/buttons/sounds/button-3.mp3",
+        ).play();
+
+        setTimeout(() => {
+          bar.style.display = "none";
+        }, 3000);
+      }
+
+      async function logout() {
+        await fetch(`${API}/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
+        localStorage.removeItem("myUserId");
+        window.location.href = "/Auth.html";
+      }
+
+      checkAuth().then(() => {
+        loadUsers();
+        fetchNotifications();
+      });
+    </script>
+  </body>
+</html>
