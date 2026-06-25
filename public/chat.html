@@ -200,9 +200,9 @@
       async function checkAuth() {
         try {
           const res = await fetch(`${API}/users`, { credentials: "include" });
-          if (res.status === 401) window.location.href = "/Auth.html";
+          if (res.status === 401) window.location.href = "/auth.html";
         } catch {
-          window.location.href = "/Auth.html";
+          window.location.href = "/auth.html";
         }
       }
 
@@ -336,7 +336,7 @@
           credentials: "include",
         });
         localStorage.removeItem("myUserId");
-        window.location.href = "/Auth.html";
+        window.location.href = "/auth.html";
       }
 
       checkAuth().then(() => {
