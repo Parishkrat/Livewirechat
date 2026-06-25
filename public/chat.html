@@ -185,10 +185,10 @@
       </div>
     </div>
 
-<script src="http://localhost:3000/socket.io/socket.io.js"></script>
+<script src="https://livewirechat.onrender.com/socket.io/socket.io.js"></script>
     <script>
-      const API = "http://localhost:3000/api";
-      const socket = io("http://localhost:3000", { withCredentials: true });
+      const API = "https://livewirechat.onrender.com/api";
+      const socket = io("https://livewirechat.onrender.com/", { withCredentials: true });
       const myId = localStorage.getItem("myUserId");
 
       let receiverId = null;

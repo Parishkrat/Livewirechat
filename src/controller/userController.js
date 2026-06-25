@@ -151,11 +151,11 @@ export const login = async (req, res) => {
     console.log("Setting cookie for user:", user._id);
     // Set cookie
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: false, // works on http://localhost
-      sameSite: "Lax",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+  maxAge: 24 * 60 * 60 * 1000,
+});
     logger.info(`User logged in: ${email} (${user._id})`);
     return res.status(200).json({
       success: true,
