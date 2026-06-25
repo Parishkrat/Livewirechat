@@ -63,6 +63,9 @@ app.use("/api", chatRouter);
 const Port = process.env.PORT;
 const Mongodb = process.env.MONGOURL;
 
+app.get("/", (req, res) => {
+  res.redirect("/Auth.html");
+});
 // DB + server start
 mongoose
   .connect(Mongodb)
